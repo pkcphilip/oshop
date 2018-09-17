@@ -3,6 +3,7 @@ import { ProductService } from '../../product.service';
 // tslint:disable-next-line:import-blacklist
 import { Subscription } from 'rxjs';
 import { Product } from '../../models/product';
+import { DataTableResource } from 'angular-4-data-table';
 
 @Component({
   selector: 'app-admin-products',
@@ -11,18 +12,42 @@ import { Product } from '../../models/product';
 })
 export class AdminProductsComponent implements OnInit, OnDestroy {
   products: Product[];
-  filteredProducts: any[];
   subscription: Subscription;
+  tableResources: DataTableResource<Product>;
+  items: Product[] = [];
+  itemCount: number;
 
   constructor(private productService: ProductService) {
     this.subscription = this.productService.getAll()
-      .subscribe(products => this.filteredProducts = this.products = products);
+      .subscribe(products => {
+        this.products = products;
+
+        this.initializeTable(products);
+      });
+  }
+
+  private initializeTable(products: Product[]) {
+    this.tableResources = new DataTableResource(products);
+    this.tableResources.query({ offset: 0 })
+      .then(items => this.items = items);
+    this.tableResources.count()
+      .then(count => this.itemCount = count);
+  }
+
+  reloadItems(params) {
+    if (!this.tableResources) {
+      return;
+    }
+    this.tableResources.query(params)
+      .then(items => this.items = items);
   }
 
   filter(query: string) {
-    this.filteredProducts = (query) ?
+    const products = (query) ?
       this.products.filter(p => p.title.toLowerCase().includes(query.toLowerCase())) :
       this.products;
+
+    this.initializeTable(products);
   }
 
   ngOnDestroy(): void {
